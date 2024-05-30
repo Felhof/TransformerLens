@@ -112,6 +112,22 @@ def test_othello_gpt():
     assert (loss.item() - expected_loss) < 4e-5
 
 
+@pytest.mark.parametrize("name,expected_loss", list(loss_store.items()))
+def test_from_pretrained_load_in_chunks(name, expected_loss):
+    # Checks that models work as expected when the state dict is loaded chunkwise
+    model = HookedTransformer.from_pretrained(name, load_in_chunks=True)
+    loss = model(text, return_type="loss")
+    assert (loss.item() - expected_loss) < 4e-5
+    del model
+    gc.collect()
+
+    if "GITHUB_ACTIONS" in os.environ:
+        clear_huggingface_cache()
+
+    # Verify that the temporary file containing the state dict was deleted
+    assert os.path.exists(f"transormer_lens/{name}_temp.h5")
+
+
 @pytest.mark.parametrize("name,expected_loss", no_processing)
 def test_from_pretrained_no_processing(name, expected_loss):
     # Checks if manually overriding the boolean flags in from_pretrained
