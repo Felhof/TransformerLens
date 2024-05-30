@@ -1542,6 +1542,36 @@ def fill_missing_keys(model, state_dict):
     return state_dict
 
 
+def fill_missing_keys_for_partial_state_dict(model, partial_state_dict, required_keys):
+    """Fills in missing keys from a partial state dict using the default initialization values from the model's state dict.
+
+    This function ensures that all required keys are present in the state dict by filling in the missing ones with default values. 
+    It is assumed to be run before the model's weights are initialized.
+
+    Args:
+        model (torch.nn.Module): The model from which the default state dict is obtained.
+        partial_state_dict (dict): Partial state dict that may have missing keys.
+        required_keys (list): List of keys that are required to be in the final state dict.
+
+    Returns:
+        dict: State dict with missing keys filled in using the default initialization values.
+    """
+    default_state_dict = model.state_dict()
+    for key in required_keys:
+        if key not in partial_state_dict:
+            if "hf_model" in key:
+                # Skip keys that are from the HuggingFace model, if loading from HF.
+                continue
+            if "W_" in key:
+                logging.warning(
+                    "Missing key for a weight matrix in partial state dict, filled in with default initialization: {}".format(
+                        key
+                    )
+                )
+            partial_state_dict[key] = default_state_dict[key]
+
+    return partial_state_dict
+
 # Convert state dicts
 def convert_gpt2_weights(gpt2, cfg: HookedTransformerConfig):
     state_dict = {}
